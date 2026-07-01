@@ -3,7 +3,7 @@ name: Enforce Code Style
 on:
   push:
     # only on setup branch for now to check if this work properly
-    branches: [ "chore/setup-ruff" ] 
+    branches: [ "setup/code-style" ] 
   pull_request:
 
 jobs:
