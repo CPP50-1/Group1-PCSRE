@@ -13,7 +13,8 @@ select = [
     "F",  # pyflakes (syntax errors, undefined names)
     "I",  # isort (groups and sorts imports according to PEP8 guidelines)
 ]
-ignore = []
+# Tell the linter to ignore line-length errors, trusting the Formatter instead
+ignore = ["E501"]
 
 # Allow autofix for all enabled rules
 fixable = ["ALL"]
