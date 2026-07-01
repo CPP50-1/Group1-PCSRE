@@ -2,8 +2,8 @@ name: Enforce Code Style
 
 on:
   push:
-    # only on setup branch for now to check if this work properly
-    branches: [ "setup/code-style" ] 
+    # comment the line below to enable the workflow to any branch
+    branches: [ "setup/code-style" ]
   pull_request:
 
 jobs:
