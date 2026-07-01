@@ -1,5 +1,3 @@
-
-
 def my_messy_function():
     x = 10
     y = 20
