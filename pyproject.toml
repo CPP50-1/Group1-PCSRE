@@ -1,0 +1,27 @@
+# Doc: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+
+[tool.ruff]
+# PEP8 line length
+line-length = 79
+target-version = "py311"
+
+[tool.ruff.lint]
+# Select the rule sets that enforce PEP8
+select = [
+    "E",  # pycodestyle errors (PEP8 formatting)
+    "W",  # pycodestyle warnings (PEP8 minor issues)
+    "F",  # pyflakes (syntax errors, undefined names)
+    "I",  # isort (groups and sorts imports according to PEP8 guidelines)
+]
+ignore = []
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+# Keep formatting aligned with PEP8 rules
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

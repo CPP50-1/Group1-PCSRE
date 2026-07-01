@@ -1,0 +1,35 @@
+name: Enforce Code Style
+
+on:
+  push:
+    # only on setup branch for now to check if this work properly
+    branches: [ "chore/setup-ruff" ] 
+  pull_request:
+
+jobs:
+  format-and-lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Run Ruff Linter (Auto-fix)
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check --fix"
+
+      - name: Run Ruff Formatter
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format"
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto-format with ruff"
+          branch: ${{ github.head_ref || github.ref_name }}
