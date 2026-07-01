@@ -17,17 +17,20 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
-
-      - name: Run Ruff Linter (Auto-fix)
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: "check --fix"
-
+        
+      # fix formating issues first
       - name: Run Ruff Formatter
         uses: astral-sh/ruff-action@v3
         with:
           args: "format"
-
+      
+      # check for remaining linting issues
+      - name: Run Ruff Linter (Auto-fix)
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check --fix"
+      
+      # commit and push
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
