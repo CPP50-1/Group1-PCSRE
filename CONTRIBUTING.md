@@ -21,7 +21,6 @@ If you run `git pull` and receive a **"divergent branches"** fatal error, it mea
 
 ```bash
 git config --global pull.rebase true
-
 ```
 
 Once this is set, running `git pull` will seamlessly apply the bot's formatting first and cleanly replay your local commits on top of it.
