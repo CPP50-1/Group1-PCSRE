@@ -1,8 +1,7 @@
-import json
-import math
 import heapq
+import math
 
-from engine.index import reverse_index, products_index
+from engine.index import products_index, reverse_index
 from engine.tokenize import tokenizer
 
 
@@ -16,7 +15,6 @@ class PonderedProduct:
 
     def __gt__(self, other):
         return self.score > other.score
-        
 
     @property
     def get_score(self) -> float:

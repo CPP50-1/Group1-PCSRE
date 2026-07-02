@@ -1,5 +1,6 @@
-from engine.tokenize import tokenizer
 import json
+
+from engine.tokenize import tokenizer
 
 
 class ProductData:
