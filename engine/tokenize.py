@@ -12,4 +12,5 @@ def tokenizer(str) -> set:
     for token in raw_tokens:
         if len(token) > 2:
             formatted_tokens.add(token.lower())
+            
     return formatted_tokens
