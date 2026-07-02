@@ -44,9 +44,12 @@ def build_tree(paths):
     return simplify(raw_tree)
 
 
+category_tree = build_tree(paths)
+
 # ---------------------------------------------------------------------------
 # 2. DFS traversal of the resulting tree
 # ---------------------------------------------------------------------------
+
 
 def list_categories_dfs(tree, category):
     # Initialize the stack with a (path, content) tuple for the root.
@@ -81,19 +84,18 @@ def list_categories_dfs(tree, category):
     return visited_order
 
 
-# ---------------------------------------------------------------------------
-# 3. Run everything
-# ---------------------------------------------------------------------------
+def search_in_category(query: str, category: str, top_k: int = 10):
+    ...
+
 
 if __name__ == "__main__":
     kb = [prod["id"] for prod in catalog if "Keyboard" in prod["name"]]
-    print(kb)
+    # print(kb)
 
-    tree = build_tree(paths)
-    print("Tree:")
-    print(json.dumps(tree, indent=4))
+    # print("Tree:")
+    # print(json.dumps(category_tree, indent=4))
 
-    order_cats = list_categories_dfs(tree, "Soft")
+    order_cats = list_categories_dfs(category_tree, "Soft")
     print("\nList Categories:")
     print(order_cats)
 
@@ -103,8 +105,4 @@ if __name__ == "__main__":
                                   for product in catalog
                                   if product["id"] in kb]
                      if prod["category"] in order_cats]
-
     print(prod_cat_list)
-
-def search_in_category(query: str, category: str, top_k: int = 10):
-    ...
