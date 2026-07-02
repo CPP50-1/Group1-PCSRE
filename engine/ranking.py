@@ -2,6 +2,7 @@ import json
 import math
 import heapq
 
+from engine.index import reverse_index, products_index
 from engine.tokenize import tokenizer
 
 
@@ -22,16 +23,6 @@ class PonderedProduct:
         return self.score
 
 
-#:NOTE: I have to create a new index because I need the stock and the sales_rank to calculate the score
-# I Have intentionally kept all the information of the product because the Part 3 will need event more than the score and the sales_rank
-# TLDR : Should be a good idea to discuss all together about that and if it is not better to create class for the inverted index as we talk about day 1
-
-with open("catalog.json") as catalog_file:
-    catalog = json.load(catalog_file)
-    id_indexed_products = {product["id"]: product
-                           for product in catalog}
-
-
 def search_ranking(query: str, top_k: int = 10):
     query_tokens = tokenizer(query)
 
@@ -44,10 +35,9 @@ def search_ranking(query: str, top_k: int = 10):
 
 
 def get_query_results(query_tokens):
-    inversed_dict = dict()  # will be replaced by the one from index.py when it will be merged
     results = dict()
     for token in query_tokens:
-        for product_id in inversed_dict[token]:
+        for product_id in reverse_index[token]:
             if product_id in results:
                 results[product_id] += 1
             else:
@@ -60,11 +50,11 @@ def get_ranked_results(query_results, top_k: int, query_tokens_count: int):
     pondered_results = []
 
     for product_id, found_count in query_results.items():
-        score = _ponderate(found_count,
-                           query_tokens_count,
-                           id_indexed_products[product_id].get("stock"),
-                           id_indexed_products[product_id].get("sales_rank")
-                           )
+        score = _ponderer(found_count,
+                          query_tokens_count,
+                          products_index[product_id].get_stock,
+                          products_index[product_id].get_sales_rank
+                          )
 
         if len(pondered_results) < top_k:
             heapq.heappush(pondered_results, PonderedProduct(product_id, score))
@@ -74,7 +64,7 @@ def get_ranked_results(query_results, top_k: int, query_tokens_count: int):
     return pondered_results
 
 
-def _ponderate(matched_tokens: int, total_query_token: int, stock: int, sales_rank: int) -> float:
+def _ponderer(matched_tokens: int, total_query_token: int, stock: int, sales_rank: int) -> float:
     score = (matched_tokens - total_query_token) * 0.5
     score += stock * 0.2 if sales_rank > 0 else 0
     score += (1 / math.log2(sales_rank + 2)) * 0.3
