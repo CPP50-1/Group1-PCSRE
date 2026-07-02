@@ -1,6 +1,5 @@
 import re
 
-
 def tokenizer(str) -> set:
     """
     Tokenise by splitting on spaces and punctuation, lowercasing, stripping short words (≤ 2 chars)
