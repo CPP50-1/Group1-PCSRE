@@ -1,8 +1,11 @@
 import json
 from collections import deque, defaultdict
+from engine.tokenize import tokenizer
+from engine.index import products_index
+from engine.ranking import get_query_results, get_ranked_results
 
 with open("../catalog.json") as catalog_file:
-    catalog = json.load(catalog_file)
+        catalog = json.load(catalog_file)
 
 paths = sorted(set([product["category"] for product in catalog]))
 
@@ -84,16 +87,31 @@ def list_categories_dfs(tree, category):
     return visited_order
 
 
-def search_in_category(query: str, category: str, top_k: int = 10):
-    ...
+def search_in_category(query: str, category: str, top_k: int, query_tokens_count: int):
+    query_tokens = tokenizer(query)
 
+    results = get_query_results(query_tokens)
+
+    cat_results = get_category_results(results)
+
+    pondered_results = get_ranked_results(cat_results, top_k, len(query_tokens))
+
+    return [pondered_result.product_id for pondered_result in
+            sorted(pondered_results, key=lambda x: x.get_score, reverse=True)]
+
+
+def get_category_results(results):
+    cat_results = dict()
+
+    categories = list_categories_dfs(category_tree, "Soft")
+
+    for product_id, found_count in results.items():
+        if products_index[product_id].get_category in categories:
+            cat_results[product_id] = found_count
+    return cat_results
 
 if __name__ == "__main__":
     kb = [prod["id"] for prod in catalog if "Keyboard" in prod["name"]]
-    # print(kb)
-
-    # print("Tree:")
-    # print(json.dumps(category_tree, indent=4))
 
     order_cats = list_categories_dfs(category_tree, "Soft")
     print("\nList Categories:")
