@@ -2,37 +2,17 @@ name: Enforce Code Style
 
 on:
   push:
-    # comment the line below to enable the workflow to any branch
-    branches: [ "setup/code-style" ]
   pull_request:
 
 jobs:
-  format-and-lint:
+  lint:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
         
-      # fix formating issues first
-      - name: Run Ruff Formatter
+      - name: Run Ruff Linter
         uses: astral-sh/ruff-action@v3
-        with:
-          args: "format"
-      
-      # check for remaining linting issues
-      - name: Run Ruff Linter (Auto-fix)
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: "check --fix"
-      
-      # commit and push
-      - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: auto-format with ruff"
-          branch: ${{ github.head_ref || github.ref_name }}
