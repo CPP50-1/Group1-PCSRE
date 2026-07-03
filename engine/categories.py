@@ -1,11 +1,12 @@
 import json
-from collections import deque, defaultdict
-from engine.tokenize import tokenizer
+from collections import defaultdict
+
 from engine.index import products_index
 from engine.ranking import get_query_results, get_ranked_results
+from engine.tokenize import tokenizer
 
 with open("../catalog.json") as catalog_file:
-        catalog = json.load(catalog_file)
+    catalog = json.load(catalog_file)
 
 paths = sorted(set([product["category"] for product in catalog]))
 
@@ -94,10 +95,16 @@ def search_in_category(query: str, category: str, top_k: int = 10):
 
     cat_results = get_category_results(results, category)
 
-    pondered_results = get_ranked_results(cat_results, top_k, len(query_tokens))
+    pondered_results = get_ranked_results(
+        cat_results, top_k, len(query_tokens)
+    )
 
-    return [pondered_result.product_id for pondered_result in
-            sorted(pondered_results, key=lambda x: x.get_score, reverse=True)]
+    return [
+        pondered_result.product_id
+        for pondered_result in sorted(
+            pondered_results, key=lambda x: x.get_score, reverse=True
+        )
+    ]
 
 
 def get_category_results(results, category: str):
@@ -110,6 +117,7 @@ def get_category_results(results, category: str):
             cat_results[product_id] = found_count
     return cat_results
 
+
 if __name__ == "__main__":
     kb = [prod["id"] for prod in catalog if "Keyboard" in prod["name"]]
 
@@ -118,11 +126,11 @@ if __name__ == "__main__":
     print(order_cats)
 
     print("\nMatches:")
-    prod_cat_list = [prod["id"]
-                     for prod in [product
-                                  for product in catalog
-                                  if product["id"] in kb]
-                     if prod["category"] in order_cats]
+    prod_cat_list = [
+        prod["id"]
+        for prod in [product for product in catalog if product["id"] in kb]
+        if prod["category"] in order_cats
+    ]
     print(prod_cat_list)
 
     search_result = search_in_category("Keyboard Monitor", "Electronics")

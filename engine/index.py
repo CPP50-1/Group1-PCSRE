@@ -34,23 +34,24 @@ def build_indexes():
         )
 
     for product in data:
-        '''
+        """
         Iterating once over all the json an creating a reverse index for the researches
-        '''
+        """
         tokens = tokenizer(product["name"]).union(product["tags"])
         for token in tokens:
             if token not in reverse_index:
                 reverse_index[token] = set()
             reverse_index[token].add(product["id"])
 
-        '''
+        """
         Tanking advantage of the iteration to build the second index to get easy lookup of all information of products
-        '''
-        products_index[product["id"]] = ProductData(product["id"],
-                                                    product["category"],
-                                                    product["stock"],
-                                                    product["sales_rank"]
-                                                    )
+        """
+        products_index[product["id"]] = ProductData(
+            product["id"],
+            product["category"],
+            product["stock"],
+            product["sales_rank"],
+        )
 
 
 build_indexes()
