@@ -44,7 +44,7 @@ def suggest(query: str, max_suggestions: int = 3):
             if print_title:
                 print("\nDid you mean?")
                 print_title = False
-            print(f"'{token}' -> ", end=" ")
+            print(f"  '{token}' -> ", end=" ")
             for term in list(reverse_index.keys()):
                 if levenshteinDistance(token, term) <= 2:
                     print(f"{term} ", end=" ")
