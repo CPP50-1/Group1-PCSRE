@@ -87,12 +87,12 @@ def list_categories_dfs(tree, category):
     return visited_order
 
 
-def search_in_category(query: str, category: str, top_k: int, query_tokens_count: int):
+def search_in_category(query: str, category: str, top_k: int = 10):
     query_tokens = tokenizer(query)
 
     results = get_query_results(query_tokens)
 
-    cat_results = get_category_results(results)
+    cat_results = get_category_results(results, category)
 
     pondered_results = get_ranked_results(cat_results, top_k, len(query_tokens))
 
@@ -100,10 +100,10 @@ def search_in_category(query: str, category: str, top_k: int, query_tokens_count
             sorted(pondered_results, key=lambda x: x.get_score, reverse=True)]
 
 
-def get_category_results(results):
+def get_category_results(results, category: str):
     cat_results = dict()
 
-    categories = list_categories_dfs(category_tree, "Soft")
+    categories = list_categories_dfs(category_tree, category)
 
     for product_id, found_count in results.items():
         if products_index[product_id].get_category in categories:
@@ -124,3 +124,7 @@ if __name__ == "__main__":
                                   if product["id"] in kb]
                      if prod["category"] in order_cats]
     print(prod_cat_list)
+
+    search_result = search_in_category("Keyboard Monitor", "Electronics")
+    print("\nSearch in Category")
+    print(search_result)

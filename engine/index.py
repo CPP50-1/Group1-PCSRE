@@ -28,7 +28,7 @@ products_index = dict()
 
 
 def build_indexes():
-    with open("catalog.json") as json_data:
+    with open("../catalog.json") as json_data:
         data = json.load(
             json_data,
         )
