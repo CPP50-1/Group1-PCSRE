@@ -21,9 +21,12 @@ def levenshteinDistance(s1, s2):
 
 
 def suggest(query: str, max_suggestions: int = 3):
-    print("\nDid you mean?")
+    print_title = True
     for token in tokenizer(query):
         if token not in reverse_index.keys():
+            if print_title:
+                print("\nDid you mean?")
+                print_title = False
             print(f"'{token}' -> ", end=" ")
             for term in list(reverse_index.keys()):
                 if levenshteinDistance(token, term) <= 2:
@@ -32,5 +35,5 @@ def suggest(query: str, max_suggestions: int = 3):
 
 
 if __name__ == "__main__":
-    query = "Keyboard Montor"
+    query = "Keybard Montor"
     suggest(query)
