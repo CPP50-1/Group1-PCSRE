@@ -32,9 +32,66 @@ Similarly, inserting the resulting tokens into our dictionary and sets takes O(1
 
 ### Data structure used and why
 
+The ranked search relies on two data structures built simultaneously during initialization: the **reverse index** and the **product index**.
+
+The product index maps each `product_id` to an instance of `ProductData` (containing the ID, category, stock, and sales rank). Storing the product as a class instance makes the code more readable than using a tuple, while negligble memory / speed cost for a catalog of only 5,000 products.
+
+**1\. Tokenization and Initial Match Count** The ranking process begins by tokenizing the user's search query. These query tokens are passed to the `get_query_results` method, which builds a results dictionary to track initial relevance.
+
+To find matches, we iterate through the query tokens. For each token, we look up its corresponding set of product IDs in the reverse index. We then iterate through that set of IDs, adding each to our results dictionary and incrementing its count. The resulting dictionary uses the matching product IDs as keys, and the values represent the "match count" (how many individual tokens from the search query were found in that product).
+
+**2\. Calculating the Weighted Score** To get the final ranked results, we pass the dictionary of matched products, the `top_k` limit (how many items to display), and the total length of the query to the `get_ranked_results` function.
+
+This function builds a list of weighted results by iterating over every matched product. For each product, it retrieves the current stock and sales rank in O(1) time via the product index. It passes these metrics, along with the initial match count and query length, to the `_ponderer` helper function. This helper applies our business logic formula to return a final **weighted score** for the product.
+
+**3\. Fetching the Top K Results** To optimize performance, we use a **min-heap** to keep only the `top_k` highest-scoring items in memory:
+
+-   If the heap isn't full yet (`len < top_k`), we push the newly scored product onto the heap.
+-   If the heap is full, we check the lowest score currently in our top K (`pondered_results[0]`). If the new product has a better score, it kicks out the lowest-scoring item and replaces it (`heapreplace`).
+
+Finally, because a min-heap only guarantees the smallest item is at the front (but doesn't strictly sort the rest), we pass the heap through Python's `sorted()` function in descending order. This ensures we return the list of `product_id`s strictly ordered from best to worst score.
+
 ### Build time complexity
 
-### Average Query time complexity
+Given:
+
+-   **C**: The number of characters in the user's search query.
+-   **M**: The total number of matched IDs across all tokens.
+-   **U**: The number of _unique_ products matched (U≤M).
+-   **K**: The `top_k` limit (the maximum number of resultsto return)
+
+Here is the step-by-step breakdown:
+
+## 1\. Tokenizing the Query: O(C)
+
+The `tokenizer` scans the search string to split it into words. This scales linearly with the length of the query (C). Because search queries are generally very short (a few words), this is practically instantaneous, but strictly speaking, it is O(C).
+
+## 2\. Fetching Initial Match Counts: O(M)
+
+As we established, `get_query_results` looks up each token in the reverse index and iterates through the resulting sets. It performs M total O(1) dictionary updates, resulting in O(M) time.
+
+## 3\. Scoring and Min-Heap (`get_ranked_results`): O(UlogK)
+
+We iterate through the U unique products found in step 2.
+
+-   Calculating the score takes O(1).
+-   Pushing to or replacing an item in a min-heap of size K takes O(logK) time. Because we perform a O(logK) operation for each of the U unique products, this step takes **O(UlogK)**.
+
+## 4\. Final Sort: O(KlogK)
+
+Because the heap contains K items, sorting it with `sorted()` takes **O(KlogK)**. Extracting the `product_id`s from the sorted list takes an additional O(K).
+
+### Final Ranking Complexity
+
+**Total Time = O(C+M+UlogK+KlogK)**
+
+1.  C (query length) is negligible.
+2.  K is smaller than or equal to U, so the sorting step O(KlogK) is overshadowed by the heap building step O(UlogK).
+
+Therefore the simplified global time complexity is:
+
+**O(M+UlogK)**
+
 
 ---
 
