@@ -11,6 +11,10 @@ class ProductData:
         self.sales_rank = sales_rank
 
     @property
+    def get_category(self):
+        return self.category
+
+    @property
     def get_stock(self):
         return self.stock
 
