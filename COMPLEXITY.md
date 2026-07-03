@@ -51,7 +51,7 @@ This function builds a list of weighted results by iterating over every matched 
 
 Finally, because a min-heap only guarantees the smallest item is at the front (but doesn't strictly sort the rest), we pass the heap through Python's `sorted()` function in descending order. This ensures we return the list of `product_id`s strictly ordered from best to worst score.
 
-### Build time complexity
+### Search time complexity
 
 Given:
 
