@@ -1,3 +1,7 @@
+from engine.index import reverse_index
+from engine.tokenize import tokenizer
+
+
 def levenshteinDistance(s1, s2):
     if len(s1) > len(s2):
         s1, s2 = s2, s1
@@ -14,3 +18,19 @@ def levenshteinDistance(s1, s2):
                 )
         distances = distances_
     return distances[-1]
+
+
+def suggest(query: str, max_suggestions: int = 3):
+    print("\nDid you mean?")
+    for token in tokenizer(query):
+        if token not in reverse_index.keys():
+            print(f"'{token}' -> ", end=" ")
+            for term in list(reverse_index.keys()):
+                if levenshteinDistance(token, term) <= 2:
+                    print(f"{term} ", end=" ")
+            print()
+
+
+if __name__ == "__main__":
+    query = "Keyboard Montor"
+    suggest(query)
