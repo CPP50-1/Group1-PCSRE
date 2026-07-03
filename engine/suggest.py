@@ -3,21 +3,25 @@ from engine.tokenize import tokenizer
 
 
 def levenshteinDistance(s1, s2):
-    if len(s1) > len(s2):
-        s1, s2 = s2, s1
-
-    distances = range(len(s1) + 1)
-    for i2, c2 in enumerate(s2):
-        distances_ = [i2 + 1]
-        for i1, c1 in enumerate(s1):
-            if c1 == c2:
-                distances_.append(distances[i1])
+    ltable = list(list())
+    ltable.append([c for c in range(0, len(s2) + 1)])
+    for r in range(1, len(s1) + 1):
+        ltable.append([r])
+        for c in range(1, len(s2) + 1):
+            ltable[r].append(0)
+    print(ltable)
+    for i in range(1, len(s1) + 1):
+        for j in range(1, len(s2) + 1):
+            if s1[i - 1] == s2[j - 1]:
+                addon = 0
             else:
-                distances_.append(
-                    1 + min((distances[i1], distances[i1 + 1], distances_[-1]))
-                )
-        distances = distances_
-    return distances[-1]
+                addon = 1
+            ltable[i][j] = min(
+                ltable[i - 1][j] + 1,
+                ltable[i][j - 1] + 1,
+                ltable[i - 1][j - 1] + addon,
+            )
+    return ltable[-1][-1]
 
 
 def suggest(query: str, max_suggestions: int = 3):
@@ -37,3 +41,5 @@ def suggest(query: str, max_suggestions: int = 3):
 if __name__ == "__main__":
     query = "Keybard Montor"
     suggest(query)
+
+    print(levenshteinDistance("toto", "totore"))
