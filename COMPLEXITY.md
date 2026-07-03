@@ -34,7 +34,7 @@ Similarly, inserting the resulting tokens into our dictionary and sets takes O(1
 
 The ranked search relies on two data structures built simultaneously during initialization: the **reverse index** and the **product index**.
 
-The product index maps each `product_id` to an instance of `ProductData` (containing the ID, category, stock, and sales rank). Storing the product as a class instance makes the code more readable than using a tuple, while negligble memory / speed cost for a catalog of only 5,000 products.
+The product index maps each `product_id` to an instance of `ProductData` (containing the ID, category, stock, and sales rank). Storing the product as a class instance makes the code more readable than using a tuple, adding negligible memory and speed overhead for a catalog of only 5,000 products.
 
 **1\. Tokenization and Initial Match Count** The ranking process begins by tokenizing the user's search query. These query tokens are passed to the `get_query_results` method, which builds a results dictionary to track initial relevance.
 
