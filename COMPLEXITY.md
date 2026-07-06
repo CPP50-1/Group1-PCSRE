@@ -117,9 +117,7 @@ We could avoid iterating through the dictionary twice by using the `setdefault()
 
 ### Data structure used and why
 
-### Build time complexity
-
-### Average Query time complexity
+### Time complexity
 
 ---
 
@@ -127,8 +125,6 @@ We could avoid iterating through the dictionary twice by using the `setdefault()
 
 ### Data structure used and why
 
-### Build time complexity
-
-### Average Query time complexity
+### Time complexity
 
 
