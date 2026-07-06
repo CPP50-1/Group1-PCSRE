@@ -123,15 +123,15 @@ To map out these edits, we place the two words on the perpendicular axes of a ma
 
 ### Navigating the Matrix
 
-Moving through the matrix dictates how the word is altered. The cost of an edit depends on the direction of your movement:
+Moving through the matrix reflect how the word is altered. The cost of an edit depends on the direction of your movement:
 
--   **Diagonal (↘):** Represents a **Match** (+0 cost if the letters are the same) or a **Substitution** (+1 cost if the letters differ).
+-   **Diagonal (↘):** Represents a **Match** (no cost) or a **Substitution** (+1 cost).
 -   **Right (→):** Represents a **Deletion** from the source string (+1 cost).
 -   **Down (↓):** Represents an **Insertion** into the target string (+1 cost).
 
 ### Computing the Shortest Path
 
-To find the minimum edit distance, the algorithm calculates a numerical cost for every cell in the grid. For any given cell, it looks at the three adjacent cells you could have arrived from (top, left, and top-left diagonal), calculates the cost of that specific move, and carries forward the lowest resulting number.
+To find the minimum edit distance, the algorithm calculates a numerical cost for every cell in the grid by looking at the three adjacent cells that could lead to the current cell (top, left, and top-left diagonal), calculates the cost of that specific move, and carries forward the lowest resulting number.
 
 Here is how the costs are calculated for the first two rows using the transition from **COT** to **CAT**:
 
@@ -177,7 +177,214 @@ We can heavily optimize the algorithm using the following heuristics:
 
 ### 2\. Prefix and Suffix Stripping
 
-Identical consecutive letters at the beginning or end of the words do not contribute to the edit cost. We can effectively strip these common prefixes and suffixes. To achieve this without creating temporary strings in memory via slicing, we use two pointers to mark the bounds of the "unmatched" middle section. This allows us to skip large portions of the strings or exit early if one word is a direct substring of the other.
+Identical consecutive letters at the beginning or end of the words do not contribute to the edit cost. We can effectively strip these common prefixes and suffixes. To achieve this without creating temporary strings in memory via slicing, we use two pointers to mark the bounds of the "unmatched" middle section. This allows us to skip large portions of the strings or exit early if one word is a direct substring of the other, which happens when a user make a typo toward the end of a word.
+
+Benchmarks of two versions of the Levenshtein algorithm (both using the squeeze heuristic, but only one utilizing prefix/suffix stripping) shows that skipping 7.8% of the characters leads to a 12% speedup. The gain is large for two reasons: 
+
+- we are effictively eliminating entire columns and rows from the matrix before computing it.
+- shifting a pointer with a simple while loop is much cheaper than reading/writing to a list inside a nested `for` loop.
+
+Code for the benchmarks:
+
+```python
+import timeit
+
+# The exact vocabulary from the dataset generator
+WORDS = [
+    "wireless", "ergonomic", "compact", "portable", "mechanical",
+    "bluetooth", "usb", "hdmi", "rechargeable", "adjustable",
+    "gaming", "professional", "silent", "backlit", "foldable",
+    "keyboard", "mouse", "monitor", "headset", "webcam",
+    "chair", "desk", "lamp", "cable", "adapter",
+    "router", "switch", "hub", "drive", "printer",
+    "laser", "inkjet", "optical", "digital", "smart",
+    "pro", "lite", "plus", "max", "ultra",
+]
+
+# Simulated user queries containing 1 or 2 typos
+TEST_QUERIES = [
+    "wireles",     # 1 edit from "wireless"
+    "keyborad",    # 2 edits from "keyboard"
+    "blutooth",    # 1 edit from "bluetooth"
+    "mechancal",   # 1 edit from "mechanical"
+    "rechargable", # 1 edit from "rechargeable"
+    "comptact",    # 1 edit from "compact"
+    "profesional", # 1 edit from "professional"
+    "gamng",       # 1 edit from "gaming"
+]
+
+def levenshtein_with_stripping(s1, s2, max_edit=2):
+    """The fully optimized algorithm with both squeeze and stripping."""
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
+    if s1 == s2: return 0
+    OUT_OF_BOUND = max_edit + 1
+    if len(s1) > len(s2): s1, s2 = s2, s1
+    len_diff = len(s2) - len(s1)
+    if len_diff > max_edit: return OUT_OF_BOUND
+
+    min_len = min(len(s1), len(s2))
+    left = 0
+    while left < min_len and s1[left] == s2[left]:
+        left += 1
+
+    right1, right2 = len(s1) - 1, len(s2) - 1
+    while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
+        right1 -= 1
+        right2 -= 1
+
+    n = right1 - left + 1
+    m = right2 - left + 1
+
+    if n <= 0 or m <= 0:
+        val = n + m
+        return val if val <= max_edit else OUT_OF_BOUND
+
+    row = [i if i <= max_edit else OUT_OF_BOUND for i in range(n + 1)]
+    start = 1
+    end = min(n + 1, max_edit + 2)
+
+    for i in range(1, m + 1):
+        c2 = s2[left + i - 1]
+        prev = row[start - 1]
+        row[start - 1] = OUT_OF_BOUND
+        if start == 1:
+            row[0] = i
+        curr_min = OUT_OF_BOUND
+
+        for j in range(start, end):
+            if s1[left + j - 1] == c2:
+                val = prev
+            else:
+                val = min(row[j], row[j - 1], prev) + 1
+            prev = row[j]
+            row[j] = val
+            if val < curr_min:
+                curr_min = val
+
+        if curr_min > max_edit: return OUT_OF_BOUND
+
+        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit:
+            end -= 1
+        end = min(n + 1, end + 1)
+        while start < end and row[start] + abs(start - i + len_diff) > max_edit:
+            start += 1
+        if start >= end: return OUT_OF_BOUND
+
+    return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
+
+def levenshtein_without_stripping(s1, s2, max_edit=2):
+    """The algorithm with the squeeze heuristic, but NO prefix/suffix stripping."""
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
+    if s1 == s2: return 0
+    OUT_OF_BOUND = max_edit + 1
+    if len(s1) > len(s2): s1, s2 = s2, s1
+    len_diff = len(s2) - len(s1)
+    if len_diff > max_edit: return OUT_OF_BOUND
+
+    n = len(s1)
+    m = len(s2)
+
+    row = [i if i <= max_edit else OUT_OF_BOUND for i in range(n + 1)]
+    start = 1
+    end = min(n + 1, max_edit + 2)
+
+    for i in range(1, m + 1):
+        c2 = s2[i - 1]
+        prev = row[start - 1]
+        row[start - 1] = OUT_OF_BOUND
+        if start == 1:
+            row[0] = i
+        curr_min = OUT_OF_BOUND
+
+        for j in range(start, end):
+            if s1[j - 1] == c2:
+                val = prev
+            else:
+                val = min(row[j], row[j - 1], prev) + 1
+            prev = row[j]
+            row[j] = val
+            if val < curr_min:
+                curr_min = val
+
+        if curr_min > max_edit: return OUT_OF_BOUND
+
+        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit:
+            end -= 1
+        end = min(n + 1, end + 1)
+        while start < end and row[start] + abs(start - i + len_diff) > max_edit:
+            start += 1
+        if start >= end: return OUT_OF_BOUND
+
+    return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
+def calculate_skip_stats():
+    """Calculates how many characters are bypassed by the stripping logic."""
+    total_evaluated_chars = 0
+    skipped_chars = 0
+    
+    for query in TEST_QUERIES:
+        for word in WORDS:
+            # We only evaluate pairs that pass the initial length delta check
+            if abs(len(query) - len(word)) <= 2:
+                s1, s2 = query, word
+                if len(s1) > len(s2): s1, s2 = s2, s1
+                
+                total_evaluated_chars += len(s1) + len(s2)
+                
+                left = 0
+                min_len = min(len(s1), len(s2))
+                while left < min_len and s1[left] == s2[left]:
+                    left += 1
+                    
+                right1, right2 = len(s1) - 1, len(s2) - 1
+                while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
+                    right1 -= 1
+                    right2 -= 1
+                
+                n = right1 - left + 1
+                m = right2 - left + 1
+                
+                if n > 0 and m > 0:
+                    skipped_chars += (len(s1) - n) + (len(s2) - m)
+                else:
+                    skipped_chars += len(s1) + len(s2)
+                    
+    return total_evaluated_chars, skipped_chars
+
+def run_test(func):
+    for query in TEST_QUERIES:
+        for word in WORDS:
+            func(query, word, max_edit=2)
+
+if __name__ == "__main__":
+    ITERATIONS = 5000 
+    
+    print("--- PREFIX & SUFFIX STRIPPING STATISTICS ---")
+    total_chars, skipped_chars = calculate_skip_stats()
+    percentage_skipped = (skipped_chars / total_chars) * 100 if total_chars else 0
+    print(f"Total characters in evaluated pairs: {total_chars}")
+    print(f"Characters skipped by pointers:      {skipped_chars}")
+    print(f"Percentage of work bypassed:         {percentage_skipped:.1f}%\n")
+    
+    print(f"--- TIMING BENCHMARK ({ITERATIONS} iterations) ---")
+    
+    time_without = timeit.timeit(lambda: run_test(levenshtein_without_stripping), number=ITERATIONS)
+    print(f"Without Stripping: {time_without:.4f} seconds")
+    
+    time_with = timeit.timeit(lambda: run_test(levenshtein_with_stripping), number=ITERATIONS)
+    print(f"With Stripping:    {time_with:.4f} seconds")
+    print("-" * 50)
+    
+    if time_with < time_without:
+        improvement = ((time_without - time_with) / time_without) * 100
+        print(f"Result: Prefix/Suffix stripping is {improvement:.1f}% FASTER.")
+    else:
+        penalty = ((time_with - time_without) / time_without) * 100
+        print(f"Result: Prefix/Suffix stripping is {penalty:.1f}% SLOWER.")
+```
 
 ### 3\. Space Complexity Reduction (1D Array)
 
@@ -187,12 +394,393 @@ Because the row length is based on the length of the horizontal string (`s1`), m
 
 ### 4\. Dynamic Band Width
 
-Since we have a strict threshold of 2, any path that strays too far from the diagonal will exceed our cost limit.
+Because we have a strict threshold (maximum of 2 edits, per spec), we do not need to compute the entire grid. Any path that strays too far from the diagonal will naturally exceed our limit. To save compute time, we only evaluate a narrow "band" of cells around the diagonal and apply two optimization rules as we process each row:
 
--   We calculate a narrow "band" around the diagonal.
--   As we progress through the rows, if the current minimal cost is already larger than the target, we can exit early.
--   After each row, we evaluate the edges of our calculation band. If the cells at the edges are mathematically guaranteed to exceed the threshold by the time they reach the bottom-right, we shrink (or "squeeze") the band. This discards invalid paths and reduces the number of cells computed per row.
+-   **Row-Level Early Exit:** If the absolute lowest cost in the current row is already higher than our threshold, we stop computing immediately: no valid path remains.
+-   **Dynamic Squeezing:** After finishing a row, we evaluate the outer edges of our calculation band. For these edge cells, we calculate the absolute minimum number of grid steps required to reach the bottom-right corner. If a cell's current cost plus this remaining distance exceeds the threshold, that path is mathematically doomed. We shrink the band to exclude these failing paths, reducing the number of cells computed in the next row.
 
+Because the squeeze calculation runs only once per row, on average the overhead of this calculation is worth it if the band is smaller than the matrix, and the max_edit distance is small, to allow paths to fail quickly. E.g words under 4 chars wont benefit from this optimisation, because the band will be approximatively the same size as the matrix. For longer words, with a small treshold, this significantly improve performance as the matrix expand quickly (length of s1 x length of s2). 
+
+Benchmarks show that implementing the dynamic band width logic with our current dictionnary produce in average a 32% speed up.
+
+Code for the benchmark:
+
+```python
+mport timeit
+
+# vocabulary from the dataset generator
+WORDS = [
+    "wireless", "ergonomic", "compact", "portable", "mechanical",
+    "bluetooth", "usb", "hdmi", "rechargeable", "adjustable",
+    "gaming", "professional", "silent", "backlit", "foldable",
+    "keyboard", "mouse", "monitor", "headset", "webcam",
+    "chair", "desk", "lamp", "cable", "adapter",
+    "router", "switch", "hub", "drive", "printer",
+    "laser", "inkjet", "optical", "digital", "smart",
+    "pro", "lite", "plus", "max", "ultra",
+]
+
+# Simulated user queries containing 1 or 2 typos
+TEST_QUERIES = [
+    "wireles",     # 1 edit from "wireless"
+    "keyborad",    # 2 edits from "keyboard"
+    "blutooth",    # 1 edit from "bluetooth"
+    "mechancal",   # 1 edit from "mechanical"
+    "rechargable", # 1 edit from "rechargeable"
+    "comptact",    # 1 edit from "compact"
+    "profesional", # 1 edit from "professional"
+    "gamng",       # 1 edit from "gaming"
+]
+
+def levenshtein_with_squeeze(s1, s2, max_edit=2):
+    """The fully optimized algorithm with the squeeze heuristic."""
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
+    if s1 == s2:
+        return 0
+    OUT_OF_BOUND = max_edit + 1
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+    len_diff = len(s2) - len(s1)
+    if len_diff > max_edit:
+        return OUT_OF_BOUND
+
+    min_len = min(len(s1), len(s2))
+    left = 0
+    while left < min_len and s1[left] == s2[left]:
+        left += 1
+
+    right1, right2 = len(s1) - 1, len(s2) - 1
+    while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
+        right1 -= 1
+        right2 -= 1
+
+    n = right1 - left + 1
+    m = right2 - left + 1
+
+    if n <= 0 or m <= 0:
+        val = n + m
+        return val if val <= max_edit else OUT_OF_BOUND
+
+    row = [i if i <= max_edit else OUT_OF_BOUND for i in range(n + 1)]
+    start = 1
+    end = min(n + 1, max_edit + 2)
+
+    for i in range(1, m + 1):
+        c2 = s2[left + i - 1]
+        prev = row[start - 1]
+        row[start - 1] = OUT_OF_BOUND
+        if start == 1:
+            row[0] = i
+        curr_min = OUT_OF_BOUND
+
+        for j in range(start, end):
+            if s1[left + j - 1] == c2:
+                val = prev
+            else:
+                val = min(row[j], row[j - 1], prev) + 1
+            prev = row[j]
+            row[j] = val
+            if val < curr_min:
+                curr_min = val
+
+        if curr_min > max_edit:
+            return OUT_OF_BOUND
+
+        # SQUEEZE HEURISTIC APPLIED
+        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit:
+            end -= 1
+        end = min(n + 1, end + 1)
+        while start < end and row[start] + abs(start - i + len_diff) > max_edit:
+            start += 1
+        if start >= end:
+            return OUT_OF_BOUND
+
+    return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
+
+def levenshtein_without_squeeze(s1, s2, max_edit=2):
+    """The algorithm with basic bounding, but without the aggressive math squeeze."""
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
+    if s1 == s2:
+        return 0
+    OUT_OF_BOUND = max_edit + 1
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+    len_diff = len(s2) - len(s1)
+    if len_diff > max_edit:
+        return OUT_OF_BOUND
+
+    min_len = min(len(s1), len(s2))
+    left = 0
+    while left < min_len and s1[left] == s2[left]:
+        left += 1
+
+    right1, right2 = len(s1) - 1, len(s2) - 1
+    while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
+        right1 -= 1
+        right2 -= 1
+
+    n = right1 - left + 1
+    m = right2 - left + 1
+
+    if n <= 0 or m <= 0:
+        val = n + m
+        return val if val <= max_edit else OUT_OF_BOUND
+
+    row = [i if i <= max_edit else OUT_OF_BOUND for i in range(n + 1)]
+    start = 1
+    end = min(n + 1, max_edit + 2)
+
+    for i in range(1, m + 1):
+        c2 = s2[left + i - 1]
+        prev = row[start - 1]
+        row[start - 1] = OUT_OF_BOUND
+        if start == 1:
+            row[0] = i
+        curr_min = OUT_OF_BOUND
+
+        for j in range(start, end):
+            if s1[left + j - 1] == c2:
+                val = prev
+            else:
+                val = min(row[j], row[j - 1], prev) + 1
+            prev = row[j]
+            row[j] = val
+            if val < curr_min:
+                curr_min = val
+
+        if curr_min > max_edit:
+            return OUT_OF_BOUND
+
+        # NO SQUEEZE: Just a standard band expansion
+        end = min(n + 1, end + 1)
+
+    return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
+# --- BENCHMARK EXECUTION ---
+
+def run_test(func):
+    """Searches every typo against the entire vocabulary."""
+    for query in TEST_QUERIES:
+        for word in WORDS:
+            func(query, word, max_edit=2)
+
+if __name__ == "__main__":
+    ITERATIONS = 5000 
+    
+    print(f"Running benchmark with {len(TEST_QUERIES)} queries against {len(WORDS)} words...")
+    print(f"Iterations: {ITERATIONS}")
+    print("-" * 50)
+    
+    time_without = timeit.timeit(lambda: run_test(levenshtein_without_squeeze), number=ITERATIONS)
+    print(f"Without Squeeze: {time_without:.4f} seconds")
+    
+    time_with = timeit.timeit(lambda: run_test(levenshtein_with_squeeze), number=ITERATIONS)
+    print(f"With Squeeze:    {time_with:.4f} seconds")
+    print("-" * 50)
+    
+    if time_with < time_without:
+        improvement = ((time_without - time_with) / time_without) * 100
+        print(f"Result: The squeeze heuristic is {improvement:.1f}% FASTER.")
+    else:
+        penalty = ((time_with - time_without) / time_without) * 100
+        print(f"Result: The squeeze heuristic is {penalty:.1f}% SLOWER.")
+```
+
+### Trie-based Levenshtein Automaton Approach
+
+Because our entire catalog uses a vocabulary pool of 40 words, implementing a Trie, which would involves jumping through nested dictionary keys or object pointers for every single letter (slow in Python) would only start to pay off if the user make a lot of mistakes and we allow a high treshold (since we already strip the suffix/prefix), or if the dictionary list becomes very large (thousands of words), were branch prunning would allow saving thousands of loops.
+
+
+We benchmarked the Trie approach against our optimized, flat-list bounded Levenshtein algorithm (utilizing dynamic band squeezing and prefix/suffix pointer stripping). The benchmark proved the flat-list approach was ~65% faster (approx. 4.1s vs 12.1s over 5,000 iterations). We therefore chose the list approach, which is currently the better fit for the dataset size.
+
+Code for the benchmark:
+
+```python
+import timeit
+
+# The exact vocabulary from the dataset generator
+WORDS = [
+    "wireless", "ergonomic", "compact", "portable", "mechanical",
+    "bluetooth", "usb", "hdmi", "rechargeable", "adjustable",
+    "gaming", "professional", "silent", "backlit", "foldable",
+    "keyboard", "mouse", "monitor", "headset", "webcam",
+    "chair", "desk", "lamp", "cable", "adapter",
+    "router", "switch", "hub", "drive", "printer",
+    "laser", "inkjet", "optical", "digital", "smart",
+    "pro", "lite", "plus", "max", "ultra",
+]
+
+# Simulated user queries containing 1 or 2 typos
+TEST_QUERIES = [
+    "wireles",     # 1 edit from "wireless"
+    "keyborad",    # 2 edits from "keyboard"
+    "blutooth",    # 1 edit from "bluetooth"
+    "mechancal",   # 1 edit from "mechanical"
+    "rechargable", # 1 edit from "rechargeable"
+    "comptact",    # 1 edit from "compact"
+    "profesional", # 1 edit from "professional"
+    "gamng",       # 1 edit from "gaming"
+]
+
+# --- 1. TRIE IMPLEMENTATION ---
+
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.word = None
+
+class LevenshteinTrie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, word):
+        node = self.root
+        for char in word:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.word = word
+
+    def search(self, query, max_edit=2):
+        """Finds all words in the Trie within max_edit distance of the query."""
+        results = []
+        # The first row of the matrix is simply 0 to len(query)
+        current_row = range(len(query) + 1)
+        
+        for char, node in self.root.children.items():
+            self._search_recursive(node, char, query, current_row, results, max_edit)
+            
+        return results
+
+    def _search_recursive(self, node, char, query, previous_row, results, max_edit):
+        columns = len(query) + 1
+        current_row = [previous_row[0] + 1]
+
+        # Build the current row based on the previous row
+        for c in range(1, columns):
+            insert_cost = current_row[c - 1] + 1
+            delete_cost = previous_row[c] + 1
+            replace_cost = previous_row[c - 1] + (0 if query[c - 1] == char else 1)
+            current_row.append(min(insert_cost, delete_cost, replace_cost))
+
+        # If we reached the end of a word, check if it's within our threshold
+        if current_row[-1] <= max_edit and node.word is not None:
+            results.append(node.word)
+
+        # BRANCH PRUNING: Only continue down this branch if the minimum cost 
+        # in the current row is within the max_edit threshold.
+        if min(current_row) <= max_edit:
+            for next_char, next_node in node.children.items():
+                self._search_recursive(next_node, next_char, query, current_row, results, max_edit)
+
+
+# --- 2. LIST IMPLEMENTATION (Your optimized version) ---
+
+def levenshtein_with_stripping(s1, s2, max_edit=2):
+    if max_edit is None: max_edit = max(len(s1), len(s2))
+    if s1 == s2: return 0
+    OUT_OF_BOUND = max_edit + 1
+    if len(s1) > len(s2): s1, s2 = s2, s1
+    len_diff = len(s2) - len(s1)
+    if len_diff > max_edit: return OUT_OF_BOUND
+
+    min_len = min(len(s1), len(s2))
+    left = 0
+    while left < min_len and s1[left] == s2[left]: left += 1
+
+    right1, right2 = len(s1) - 1, len(s2) - 1
+    while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
+        right1 -= 1
+        right2 -= 1
+
+    n = right1 - left + 1
+    m = right2 - left + 1
+
+    if n <= 0 or m <= 0:
+        val = n + m
+        return val if val <= max_edit else OUT_OF_BOUND
+
+    row = [i if i <= max_edit else OUT_OF_BOUND for i in range(n + 1)]
+    start = 1
+    end = min(n + 1, max_edit + 2)
+
+    for i in range(1, m + 1):
+        c2 = s2[left + i - 1]
+        prev = row[start - 1]
+        row[start - 1] = OUT_OF_BOUND
+        if start == 1: row[0] = i
+        curr_min = OUT_OF_BOUND
+
+        for j in range(start, end):
+            if s1[left + j - 1] == c2:
+                val = prev
+            else:
+                val = min(row[j], row[j - 1], prev) + 1
+            prev = row[j]
+            row[j] = val
+            if val < curr_min: curr_min = val
+
+        if curr_min > max_edit: return OUT_OF_BOUND
+
+        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit: end -= 1
+        end = min(n + 1, end + 1)
+        while start < end and row[start] + abs(start - i + len_diff) > max_edit: start += 1
+        if start >= end: return OUT_OF_BOUND
+
+    return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
+def search_list(query, vocabulary, max_edit=2):
+    """Wraps the standalone function to match the Trie's output behavior."""
+    results = []
+    for word in vocabulary:
+        if levenshtein_with_stripping(query, word, max_edit) <= max_edit:
+            results.append(word)
+    return results
+
+# --- BENCHMARK EXECUTION ---
+
+def run_trie_test(trie):
+    for query in TEST_QUERIES:
+        trie.search(query, max_edit=2)
+
+def run_list_test(vocabulary):
+    for query in TEST_QUERIES:
+        search_list(query, vocabulary, max_edit=2)
+
+if __name__ == "__main__":
+    ITERATIONS = 5000 
+    
+    # 1. Measure Build Time (Load time complexity)
+    build_start = timeit.default_timer()
+    trie = LevenshteinTrie()
+    for word in WORDS:
+        trie.insert(word)
+    build_end = timeit.default_timer()
+    trie_build_time = (build_end - build_start) * 1000 # in ms
+    
+    print("--- BUILD TIME COMPLEXITY ---")
+    print(f"List (No build needed):    0.00 ms")
+    print(f"Trie Construction Time:    {trie_build_time:.2f} ms\n")
+    
+    print(f"--- QUERY TIME COMPLEXITY ({ITERATIONS} iterations) ---")
+    
+    time_list = timeit.timeit(lambda: run_list_test(WORDS), number=ITERATIONS)
+    print(f"List + Bound Heuristics: {time_list:.4f} seconds")
+    
+    time_trie = timeit.timeit(lambda: run_trie_test(trie), number=ITERATIONS)
+    print(f"Trie + Branch Pruning:   {time_trie:.4f} seconds")
+    print("-" * 50)
+    
+    if time_trie < time_list:
+        improvement = ((time_list - time_trie) / time_list) * 100
+        print(f"Result: The Trie approach is {improvement:.1f}% FASTER.")
+    else:
+        penalty = ((time_trie - time_list) / time_list) * 100
+        print(f"Result: The Trie approach is {penalty:.1f}% SLOWER.")
+```
 
 ### Time complexity
 
