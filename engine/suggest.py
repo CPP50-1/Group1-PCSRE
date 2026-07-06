@@ -1,1 +1,117 @@
+from engine.index import reverse_index
+from engine.tokenize import tokenizer
 
+
+def minimum_levenshtein_distance(s1, s2, max_edit=None):
+    """
+    Return the levenshtein distance between two words, or max_edit+1 where max_edit is
+    the maximum levenshtein distance we tolerate
+    """
+
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
+
+    # early exit if the two strings are identical
+    if s1 == s2:
+        return 0
+
+    OUT_OF_BOUND = max_edit + 1
+
+    # ensure s2 is always the longer or equal string
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+
+    len_diff = len(s2) - len(s1)
+
+    # early exit if the length difference exceeds tolerance
+    if len_diff > max_edit:
+        return OUT_OF_BOUND
+
+    # find the common prefix end if any
+    min_len = min(len(s1), len(s2))
+    left = 0
+    while left < min_len and s1[left] == s2[left]:
+        left += 1
+
+    # find the common suffix start if any
+    right1, right2 = len(s1) - 1, len(s2) - 1
+    while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
+        right1 -= 1
+        right2 -= 1
+
+    # window of the strings to compare
+    n = right1 - left + 1
+    m = right2 - left + 1
+
+    if n <= 0 or m <= 0:
+        # one word is the prefix/suffix of the other
+        return val if (val := n + m) <= max_edit else OUT_OF_BOUND
+
+    row = [i if i <= max_edit else OUT_OF_BOUND for i in range(n + 1)]
+
+    start = 1
+    # Initial band width
+    end = min(n + 1, max_edit + 2)
+
+    for i in range(1, m + 1):
+        c2 = s2[left + i - 1]
+
+        # State overwrites & invalid paths
+        prev = row[start - 1]
+        row[start - 1] = OUT_OF_BOUND
+
+        if start == 1:
+            row[0] = i
+
+        curr_min = OUT_OF_BOUND
+
+        for j in range(start, end):
+            if s1[left + j - 1] == c2:
+                val = prev
+            else:
+                val = min(row[j], row[j - 1], prev) + 1
+
+            prev = row[j]
+            row[j] = val
+
+            if val < curr_min:
+                curr_min = val
+
+        if curr_min > max_edit:
+            return OUT_OF_BOUND
+
+        # Squeeze heuristic
+        while (
+            end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit
+        ):
+            end -= 1
+
+        end = min(n + 1, end + 1)
+
+        while (
+            start < end and row[start] + abs(start - i + len_diff) > max_edit
+        ):
+            start += 1
+
+        if start >= end:
+            return OUT_OF_BOUND
+
+    return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
+
+def suggest(query: str, max_suggestions: int = 3):
+    print_title = True
+    for token in tokenizer(query):
+        if token not in reverse_index.keys():
+            if print_title:
+                print("\nDid you mean?")
+                print_title = False
+            print(f"  '{token}' → ", end=" ")
+            for term in list(reverse_index.keys()):
+                if minimum_levenshtein_distance(token, term) <= 2:
+                    print(f"{term} ", end=" ")
+            print()
+
+
+if __name__ == "__main__":
+    ...
