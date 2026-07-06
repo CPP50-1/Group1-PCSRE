@@ -117,6 +117,83 @@ We could avoid iterating through the dictionary twice by using the `setdefault()
 
 ### Data structure used and why
 
+The **Levenshtein distance** represents the minimal number of single-character edits (insertions, deletions, or substitutions) required to transform a source string into a target string.
+
+To map out these edits, we place the two words on the perpendicular axes of a matrix: the source word on the horizontal axis (left to right) and the target word on the vertical axis (top to bottom). Every step through this matrix represents a potential string manipulation.
+
+### Navigating the Matrix
+
+Moving through the matrix dictates how the word is altered. The cost of an edit depends on the direction of your movement:
+
+-   **Diagonal (↘):** Represents a **Match** (+0 cost if the letters are the same) or a **Substitution** (+1 cost if the letters differ).
+-   **Right (→):** Represents a **Deletion** from the source string (+1 cost).
+-   **Down (↓):** Represents an **Insertion** into the target string (+1 cost).
+
+### Computing the Shortest Path
+
+To find the minimum edit distance, the algorithm calculates a numerical cost for every cell in the grid. For any given cell, it looks at the three adjacent cells you could have arrived from (top, left, and top-left diagonal), calculates the cost of that specific move, and carries forward the lowest resulting number.
+
+Here is how the costs are calculated for the first two rows using the transition from **COT** to **CAT**:
+
+|     | **None** | **C** | **O** | **T** |
+| --- | --- | --- | --- | --- |
+| **None** | 0 (↘) | 1 (→) | 2 (→) | 3 (→) |
+| **C** | 1 (↓) | 0 (↘) | 1 (→) | 2 (→) |
+
+**1\. First Row (`None`)** To go from "COT" to an empty string ("None"), our only option is to keep moving right and deleting letters:
+
+-   `None` to `None` = 0
+-   `C` to `None` = 0 + 1 = **1**
+-   `O` to `None` = 1 + 1 = **2**
+-   `T` to `None` = 2 + 1 = **3**
+
+**2\. Second Row (`C`)** The algorithm evaluates all three incoming paths to pick the lowest cost.
+
+-   **For the cell (`C`, `C`):**
+    
+    -   From Top: 1 + 1 = 2
+    -   From Left: 1 + 1 = 2
+    -   From Diagonal: 0 + 0 (Letters match) = **0**
+    -   _Result:_ We pick the diagonal move (↘) because 0 is the lowest cost.
+-   **For the cell (`O`, `C`):**
+    
+    -   From Top: 2 + 1 = 3
+    -   From Left: 0 + 1 = **1**
+    -   From Diagonal: 1 + 1 (Letters don't match) = 2
+    -   _Result:_ We pick the move from the left (→) because 1 is the lowest cost.
+
+By filling out the entire grid using these rules, the final minimal cost will land in the bottom-right cell.
+
+## Optimization (Bounded Approach)
+
+A standard Levenshtein calculation requires O(N⋅M) compute time and memory. However, per spec, our goal is simply to find words that fall within a strict Levenshtein threshold of 2 and discard the rest. Therefore, computing the entire matrix wastes significant resources.
+
+We can heavily optimize the algorithm using the following heuristics:
+
+### 1\. Early Exits
+
+-   **Length Delta:** The Levenshtein distance will always be at least the difference in length between the two words. If the length difference strictly exceeds our maximum allowed edits, we can skip the calculation entirely.
+-   **Equality Check:** If the strings are completely identical, we immediately return 0.
+
+### 2\. Prefix and Suffix Stripping
+
+Identical consecutive letters at the beginning or end of the words do not contribute to the edit cost. We can effectively strip these common prefixes and suffixes. To achieve this without creating temporary strings in memory via slicing, we use two pointers to mark the bounds of the "unmatched" middle section. This allows us to skip large portions of the strings or exit early if one word is a direct substring of the other.
+
+### 3\. Space Complexity Reduction (1D Array)
+
+The algorithm only ever moves forward (right, down, or diagonal-right), therefor calculating the current row only requires the data from the immediately preceding row. Instead of storing the full N×M matrix in memory, we only need to store a single array representing the previous row, updating it as we step downward.
+
+Because the row length is based on the length of the horizontal string (`s1`), making `s1` the shortest string ensures that the array take as little memory as possible.
+
+### 4\. Dynamic Band Width
+
+Since we have a strict threshold of 2, any path that strays too far from the diagonal will exceed our cost limit.
+
+-   We calculate a narrow "band" around the diagonal.
+-   As we progress through the rows, if the current minimal cost is already larger than the target, we can exit early.
+-   After each row, we evaluate the edges of our calculation band. If the cells at the edges are mathematically guaranteed to exceed the threshold by the time they reach the bottom-right, we shrink (or "squeeze") the band. This discards invalid paths and reduces the number of cells computed per row.
+
+
 ### Time complexity
 
 ---
@@ -126,5 +203,3 @@ We could avoid iterating through the dictionary twice by using the `setdefault()
 ### Data structure used and why
 
 ### Time complexity
-
-
