@@ -1,8 +1,11 @@
-def levenshteinDistance(s1, s2, max_edit):
+def levenshteinDistance(s1, s2, max_edit=None):
     """
     Return the levenshtein distance between two words, or max_edit+1 where max_edit is
     the maximum levenshtein distance we tolerate
     """
+
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
 
     # early exit if the two strings are identical
     if s1 == s2:
@@ -48,11 +51,11 @@ def levenshteinDistance(s1, s2, max_edit):
 
     for i in range(1, m + 1):
         c2 = s2[left + i - 1]
+        prev = row[start - 1]
 
         if start == 1:
             row[0] = i
 
-        prev = row[start - 1]
         curr_min = OUT_OF_BOUND
 
         for j in range(start, end):
