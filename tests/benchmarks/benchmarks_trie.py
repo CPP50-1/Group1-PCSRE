@@ -48,10 +48,10 @@ class LevenshteinTrie:
         results = []
         # The first row of the matrix is simply 0 to len(query)
         current_row = range(len(query) + 1)
-        
+
         for char, node in self.root.children.items():
             self._search_recursive(node, char, query, current_row, results, max_edit)
-            
+
         return results
 
     def _search_recursive(self, node, char, query, previous_row, results, max_edit):
@@ -69,7 +69,7 @@ class LevenshteinTrie:
         if current_row[-1] <= max_edit and node.word is not None:
             results.append(node.word)
 
-        # BRANCH PRUNING: Only continue down this branch if the minimum cost 
+        # BRANCH PRUNING: Only continue down this branch if the minimum cost
         # in the current row is within the max_edit threshold.
         if min(current_row) <= max_edit:
             for next_char, next_node in node.children.items():
@@ -150,8 +150,8 @@ def run_list_test(vocabulary):
         search_list(query, vocabulary, max_edit=2)
 
 if __name__ == "__main__":
-    ITERATIONS = 5000 
-    
+    ITERATIONS = 5000
+
     # 1. Measure Build Time (Load time complexity)
     build_start = timeit.default_timer()
     trie = LevenshteinTrie()
@@ -159,20 +159,20 @@ if __name__ == "__main__":
         trie.insert(word)
     build_end = timeit.default_timer()
     trie_build_time = (build_end - build_start) * 1000 # in ms
-    
+
     print("--- BUILD TIME COMPLEXITY ---")
-    print(f"List (No build needed):    0.00 ms")
+    print("List (No build needed):    0.00 ms")
     print(f"Trie Construction Time:    {trie_build_time:.2f} ms\n")
-    
+
     print(f"--- QUERY TIME COMPLEXITY ({ITERATIONS} iterations) ---")
-    
+
     time_list = timeit.timeit(lambda: run_list_test(WORDS), number=ITERATIONS)
     print(f"List + Bound Heuristics: {time_list:.4f} seconds")
-    
+
     time_trie = timeit.timeit(lambda: run_trie_test(trie), number=ITERATIONS)
     print(f"Trie + Branch Pruning:   {time_trie:.4f} seconds")
     print("-" * 50)
-    
+
     if time_trie < time_list:
         improvement = ((time_list - time_trie) / time_list) * 100
         print(f"Result: The Trie approach is {improvement:.1f}% FASTER.")
