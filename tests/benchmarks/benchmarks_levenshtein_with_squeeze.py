@@ -160,19 +160,19 @@ def run_test(func):
             func(query, word, max_edit=2)
 
 if __name__ == "__main__":
-    ITERATIONS = 5000 
-    
+    ITERATIONS = 5000
+
     print(f"Running benchmark with {len(TEST_QUERIES)} queries against {len(WORDS)} words...")
     print(f"Iterations: {ITERATIONS}")
     print("-" * 50)
-    
+
     time_without = timeit.timeit(lambda: run_test(levenshtein_without_squeeze), number=ITERATIONS)
     print(f"Without Squeeze: {time_without:.4f} seconds")
-    
+
     time_with = timeit.timeit(lambda: run_test(levenshtein_with_squeeze), number=ITERATIONS)
     print(f"With Squeeze:    {time_with:.4f} seconds")
     print("-" * 50)
-    
+
     if time_with < time_without:
         improvement = ((time_without - time_with) / time_without) * 100
         print(f"Result: The squeeze heuristic is {improvement:.1f}% FASTER.")
