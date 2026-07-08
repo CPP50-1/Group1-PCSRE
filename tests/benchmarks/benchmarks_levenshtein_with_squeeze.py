@@ -2,27 +2,60 @@ import timeit
 
 # vocabulary from the dataset generator
 WORDS = [
-    "wireless", "ergonomic", "compact", "portable", "mechanical",
-    "bluetooth", "usb", "hdmi", "rechargeable", "adjustable",
-    "gaming", "professional", "silent", "backlit", "foldable",
-    "keyboard", "mouse", "monitor", "headset", "webcam",
-    "chair", "desk", "lamp", "cable", "adapter",
-    "router", "switch", "hub", "drive", "printer",
-    "laser", "inkjet", "optical", "digital", "smart",
-    "pro", "lite", "plus", "max", "ultra",
+    "wireless",
+    "ergonomic",
+    "compact",
+    "portable",
+    "mechanical",
+    "bluetooth",
+    "usb",
+    "hdmi",
+    "rechargeable",
+    "adjustable",
+    "gaming",
+    "professional",
+    "silent",
+    "backlit",
+    "foldable",
+    "keyboard",
+    "mouse",
+    "monitor",
+    "headset",
+    "webcam",
+    "chair",
+    "desk",
+    "lamp",
+    "cable",
+    "adapter",
+    "router",
+    "switch",
+    "hub",
+    "drive",
+    "printer",
+    "laser",
+    "inkjet",
+    "optical",
+    "digital",
+    "smart",
+    "pro",
+    "lite",
+    "plus",
+    "max",
+    "ultra",
 ]
 
 # Simulated user queries containing 1 or 2 typos
 TEST_QUERIES = [
-    "wireles",     # 1 edit from "wireless"
-    "keyborad",    # 2 edits from "keyboard"
-    "blutooth",    # 1 edit from "bluetooth"
-    "mechancal",   # 1 edit from "mechanical"
-    "rechargable", # 1 edit from "rechargeable"
-    "comptact",    # 1 edit from "compact"
-    "profesional", # 1 edit from "professional"
-    "gamng",       # 1 edit from "gaming"
+    "wireles",  # 1 edit from "wireless"
+    "keyborad",  # 2 edits from "keyboard"
+    "blutooth",  # 1 edit from "bluetooth"
+    "mechancal",  # 1 edit from "mechanical"
+    "rechargable",  # 1 edit from "rechargeable"
+    "comptact",  # 1 edit from "compact"
+    "profesional",  # 1 edit from "professional"
+    "gamng",  # 1 edit from "gaming"
 ]
+
 
 def levenshtein_with_squeeze(s1, s2, max_edit=2):
     """The fully optimized algorithm with the squeeze heuristic."""
@@ -80,10 +113,14 @@ def levenshtein_with_squeeze(s1, s2, max_edit=2):
             return OUT_OF_BOUND
 
         # SQUEEZE HEURISTIC APPLIED
-        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit:
+        while (
+            end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit
+        ):
             end -= 1
         end = min(n + 1, end + 1)
-        while start < end and row[start] + abs(start - i + len_diff) > max_edit:
+        while (
+            start < end and row[start] + abs(start - i + len_diff) > max_edit
+        ):
             start += 1
         if start >= end:
             return OUT_OF_BOUND
@@ -151,7 +188,9 @@ def levenshtein_without_squeeze(s1, s2, max_edit=2):
 
     return row[n] if row[n] <= max_edit else OUT_OF_BOUND
 
+
 # --- BENCHMARK EXECUTION ---
+
 
 def run_test(func):
     """Searches every typo against the entire vocabulary."""
@@ -159,17 +198,24 @@ def run_test(func):
         for word in WORDS:
             func(query, word, max_edit=2)
 
+
 if __name__ == "__main__":
     ITERATIONS = 5000
 
-    print(f"Running benchmark with {len(TEST_QUERIES)} queries against {len(WORDS)} words...")
+    print(
+        f"Running benchmark with {len(TEST_QUERIES)} queries against {len(WORDS)} words..."
+    )
     print(f"Iterations: {ITERATIONS}")
     print("-" * 50)
 
-    time_without = timeit.timeit(lambda: run_test(levenshtein_without_squeeze), number=ITERATIONS)
+    time_without = timeit.timeit(
+        lambda: run_test(levenshtein_without_squeeze), number=ITERATIONS
+    )
     print(f"Without Squeeze: {time_without:.4f} seconds")
 
-    time_with = timeit.timeit(lambda: run_test(levenshtein_with_squeeze), number=ITERATIONS)
+    time_with = timeit.timeit(
+        lambda: run_test(levenshtein_with_squeeze), number=ITERATIONS
+    )
     print(f"With Squeeze:    {time_with:.4f} seconds")
     print("-" * 50)
 

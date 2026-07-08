@@ -2,34 +2,68 @@ import timeit
 
 # The exact vocabulary from the dataset generator
 WORDS = [
-    "wireless", "ergonomic", "compact", "portable", "mechanical",
-    "bluetooth", "usb", "hdmi", "rechargeable", "adjustable",
-    "gaming", "professional", "silent", "backlit", "foldable",
-    "keyboard", "mouse", "monitor", "headset", "webcam",
-    "chair", "desk", "lamp", "cable", "adapter",
-    "router", "switch", "hub", "drive", "printer",
-    "laser", "inkjet", "optical", "digital", "smart",
-    "pro", "lite", "plus", "max", "ultra",
+    "wireless",
+    "ergonomic",
+    "compact",
+    "portable",
+    "mechanical",
+    "bluetooth",
+    "usb",
+    "hdmi",
+    "rechargeable",
+    "adjustable",
+    "gaming",
+    "professional",
+    "silent",
+    "backlit",
+    "foldable",
+    "keyboard",
+    "mouse",
+    "monitor",
+    "headset",
+    "webcam",
+    "chair",
+    "desk",
+    "lamp",
+    "cable",
+    "adapter",
+    "router",
+    "switch",
+    "hub",
+    "drive",
+    "printer",
+    "laser",
+    "inkjet",
+    "optical",
+    "digital",
+    "smart",
+    "pro",
+    "lite",
+    "plus",
+    "max",
+    "ultra",
 ]
 
 # Simulated user queries containing 1 or 2 typos
 TEST_QUERIES = [
-    "wireles",     # 1 edit from "wireless"
-    "keyborad",    # 2 edits from "keyboard"
-    "blutooth",    # 1 edit from "bluetooth"
-    "mechancal",   # 1 edit from "mechanical"
-    "rechargable", # 1 edit from "rechargeable"
-    "comptact",    # 1 edit from "compact"
-    "profesional", # 1 edit from "professional"
-    "gamng",       # 1 edit from "gaming"
+    "wireles",  # 1 edit from "wireless"
+    "keyborad",  # 2 edits from "keyboard"
+    "blutooth",  # 1 edit from "bluetooth"
+    "mechancal",  # 1 edit from "mechanical"
+    "rechargable",  # 1 edit from "rechargeable"
+    "comptact",  # 1 edit from "compact"
+    "profesional",  # 1 edit from "professional"
+    "gamng",  # 1 edit from "gaming"
 ]
 
 # --- 1. TRIE IMPLEMENTATION ---
+
 
 class TrieNode:
     def __init__(self):
         self.children = {}
         self.word = None
+
 
 class LevenshteinTrie:
     def __init__(self):
@@ -50,11 +84,15 @@ class LevenshteinTrie:
         current_row = range(len(query) + 1)
 
         for char, node in self.root.children.items():
-            self._search_recursive(node, char, query, current_row, results, max_edit)
+            self._search_recursive(
+                node, char, query, current_row, results, max_edit
+            )
 
         return results
 
-    def _search_recursive(self, node, char, query, previous_row, results, max_edit):
+    def _search_recursive(
+        self, node, char, query, previous_row, results, max_edit
+    ):
         columns = len(query) + 1
         current_row = [previous_row[0] + 1]
 
@@ -62,7 +100,9 @@ class LevenshteinTrie:
         for c in range(1, columns):
             insert_cost = current_row[c - 1] + 1
             delete_cost = previous_row[c] + 1
-            replace_cost = previous_row[c - 1] + (0 if query[c - 1] == char else 1)
+            replace_cost = previous_row[c - 1] + (
+                0 if query[c - 1] == char else 1
+            )
             current_row.append(min(insert_cost, delete_cost, replace_cost))
 
         # If we reached the end of a word, check if it's within our threshold
@@ -73,22 +113,30 @@ class LevenshteinTrie:
         # in the current row is within the max_edit threshold.
         if min(current_row) <= max_edit:
             for next_char, next_node in node.children.items():
-                self._search_recursive(next_node, next_char, query, current_row, results, max_edit)
+                self._search_recursive(
+                    next_node, next_char, query, current_row, results, max_edit
+                )
 
 
 # --- 2. LIST IMPLEMENTATION (Your optimized version) ---
 
+
 def levenshtein_with_stripping(s1, s2, max_edit=2):
-    if max_edit is None: max_edit = max(len(s1), len(s2))
-    if s1 == s2: return 0
+    if max_edit is None:
+        max_edit = max(len(s1), len(s2))
+    if s1 == s2:
+        return 0
     OUT_OF_BOUND = max_edit + 1
-    if len(s1) > len(s2): s1, s2 = s2, s1
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
     len_diff = len(s2) - len(s1)
-    if len_diff > max_edit: return OUT_OF_BOUND
+    if len_diff > max_edit:
+        return OUT_OF_BOUND
 
     min_len = min(len(s1), len(s2))
     left = 0
-    while left < min_len and s1[left] == s2[left]: left += 1
+    while left < min_len and s1[left] == s2[left]:
+        left += 1
 
     right1, right2 = len(s1) - 1, len(s2) - 1
     while right1 >= left and right2 >= left and s1[right1] == s2[right2]:
@@ -110,7 +158,8 @@ def levenshtein_with_stripping(s1, s2, max_edit=2):
         c2 = s2[left + i - 1]
         prev = row[start - 1]
         row[start - 1] = OUT_OF_BOUND
-        if start == 1: row[0] = i
+        if start == 1:
+            row[0] = i
         curr_min = OUT_OF_BOUND
 
         for j in range(start, end):
@@ -120,16 +169,26 @@ def levenshtein_with_stripping(s1, s2, max_edit=2):
                 val = min(row[j], row[j - 1], prev) + 1
             prev = row[j]
             row[j] = val
-            if val < curr_min: curr_min = val
+            if val < curr_min:
+                curr_min = val
 
-        if curr_min > max_edit: return OUT_OF_BOUND
+        if curr_min > max_edit:
+            return OUT_OF_BOUND
 
-        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit: end -= 1
+        while (
+            end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit
+        ):
+            end -= 1
         end = min(n + 1, end + 1)
-        while start < end and row[start] + abs(start - i + len_diff) > max_edit: start += 1
-        if start >= end: return OUT_OF_BOUND
+        while (
+            start < end and row[start] + abs(start - i + len_diff) > max_edit
+        ):
+            start += 1
+        if start >= end:
+            return OUT_OF_BOUND
 
     return row[n] if row[n] <= max_edit else OUT_OF_BOUND
+
 
 def search_list(query, vocabulary, max_edit=2):
     """Wraps the standalone function to match the Trie's output behavior."""
@@ -139,15 +198,19 @@ def search_list(query, vocabulary, max_edit=2):
             results.append(word)
     return results
 
+
 # --- BENCHMARK EXECUTION ---
+
 
 def run_trie_test(trie):
     for query in TEST_QUERIES:
         trie.search(query, max_edit=2)
 
+
 def run_list_test(vocabulary):
     for query in TEST_QUERIES:
         search_list(query, vocabulary, max_edit=2)
+
 
 if __name__ == "__main__":
     ITERATIONS = 5000
@@ -158,7 +221,7 @@ if __name__ == "__main__":
     for word in WORDS:
         trie.insert(word)
     build_end = timeit.default_timer()
-    trie_build_time = (build_end - build_start) * 1000 # in ms
+    trie_build_time = (build_end - build_start) * 1000  # in ms
 
     print("--- BUILD TIME COMPLEXITY ---")
     print("List (No build needed):    0.00 ms")
