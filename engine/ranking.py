@@ -28,18 +28,23 @@ def search_ranking(query: str, top_k: int = 10):
 
     pondered_results = get_ranked_results(results, top_k, len(query_tokens))
 
-    return [pondered_result.product_id for pondered_result in
-            sorted(pondered_results, key=lambda x: x.get_score, reverse=True)]
+    return [
+        pondered_result.product_id
+        for pondered_result in sorted(
+            pondered_results, key=lambda x: x.get_score, reverse=True
+        )
+    ]
 
 
 def get_query_results(query_tokens):
     results = dict()
     for token in query_tokens:
-        for product_id in reverse_index[token]:
-            if product_id in results:
-                results[product_id] += 1
-            else:
-                results[product_id] = 1
+        if token in reverse_index.keys():
+            for product_id in reverse_index[token]:
+                if product_id in results:
+                    results[product_id] += 1
+                else:
+                    results[product_id] = 1
 
     return results
 
@@ -48,11 +53,12 @@ def get_ranked_results(query_results, top_k: int, query_tokens_count: int):
     pondered_results = []
 
     for product_id, found_count in query_results.items():
-        score = _ponderer(found_count,
-                          query_tokens_count,
-                          products_index[product_id].get_stock,
-                          products_index[product_id].get_sales_rank
-                          )
+        score = _ponderer(
+            found_count,
+            query_tokens_count,
+            products_index[product_id].get_stock,
+            products_index[product_id].get_sales_rank,
+        )
 
         if len(pondered_results) < top_k:
             heapq.heappush(pondered_results, PonderedProduct(product_id, score))
@@ -62,7 +68,9 @@ def get_ranked_results(query_results, top_k: int, query_tokens_count: int):
     return pondered_results
 
 
-def _ponderer(matched_tokens: int, total_query_token: int, stock: int, sales_rank: int) -> float:
+def _ponderer(
+    matched_tokens: int, total_query_token: int, stock: int, sales_rank: int
+) -> float:
     score = (matched_tokens - total_query_token) * 0.5
     score += stock * 0.2 if sales_rank > 0 else 0
     score += (1 / math.log2(sales_rank + 2)) * 0.3

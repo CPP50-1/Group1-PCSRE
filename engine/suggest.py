@@ -81,16 +81,12 @@ def minimum_levenshtein_distance(s1, s2, max_edit=None):
             return OUT_OF_BOUND
 
         # Squeeze heuristic
-        while (
-            end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit
-        ):
+        while end > 1 and row[end - 1] + abs((end - 1) - i + len_diff) > max_edit:
             end -= 1
 
         end = min(n + 1, end + 1)
 
-        while (
-            start < end and row[start] + abs(start - i + len_diff) > max_edit
-        ):
+        while start < end and row[start] + abs(start - i + len_diff) > max_edit:
             start += 1
 
         if start >= end:
@@ -107,10 +103,15 @@ def suggest(query: str, max_suggestions: int = 3):
                 print("\nDid you mean?")
                 print_title = False
             print(f"  '{token}' → ", end=" ")
+            termlist = ""
             for term in list(reverse_index.keys()):
                 if minimum_levenshtein_distance(token, term) <= 2:
-                    print(f"{term} ", end=" ")
-            print()
+                    # print(f"{term} ", end=" ")
+                    termlist += term + " "
+            if termlist:
+                print(termlist)
+            else:
+                print("NO SUGGESTION FOUND")
 
 
 if __name__ == "__main__":
