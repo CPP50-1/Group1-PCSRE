@@ -238,6 +238,4 @@ Ultimately, we chose the flat-list bounded approach over a Trie/Automaton given 
 
 ## CLI
 
-### Data structure used and why
-
-### Time complexity
+See above for the detail of each feature used to create the CLI based search.
