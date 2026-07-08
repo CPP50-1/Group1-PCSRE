@@ -99,7 +99,7 @@ def minimum_levenshtein_distance(s1, s2, max_edit=None):
     return row[n] if row[n] <= max_edit else OUT_OF_BOUND
 
 
-def suggest(query: str, max_suggestions: int = 3):
+def suggest(query: str, max_suggestions: int = 2):
     print_title = True
     for token in tokenizer(query):
         if token not in reverse_index.keys():
@@ -108,7 +108,10 @@ def suggest(query: str, max_suggestions: int = 3):
                 print_title = False
             print(f"  '{token}' → ", end=" ")
             for term in list(reverse_index.keys()):
-                if minimum_levenshtein_distance(token, term) <= 2:
+                if (
+                    minimum_levenshtein_distance(token, term, max_suggestions)
+                    <= 2
+                ):
                     print(f"{term} ", end=" ")
             print()
 
